@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<%- include('../partials/head.ejs') %>
+
+<body>
+<h1>Chat Info: <%= chat.name %></h1>
+<ul>
+    <% chat.participants.forEach(participant => { %>
+        <li><%= participant.name %></li>
+    <% }); %>
+</ul>
+<a href="/chats/<%= chat.id %>/edit">Edit Chat Info</a>
+</body>
+</html>
