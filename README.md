@@ -1,4 +1,4 @@
-# Onix Chat App
+![prismaliser](https://github.com/surinvladyslav/onix-chat-app/assets/67697556/7e0b98f7-500e-446c-b3cd-9fe6af65847f)# Onix Chat App
 
 ## Description
 Welcome to Onix Chat App, a test project developed for Onix Company. This application is a simple chat application.
@@ -8,7 +8,7 @@ Welcome to Onix Chat App, a test project developed for Onix Company. This applic
 > Nest.js API. Supports PostgreSQL, Socket.io, PM2, Prisma, Docker, Docker-compose, Min.io, Swagger, EJS
 
 ## Prisma Scheme
-![prismaliser.png](..%2F..%2FDownloads%2Fprismaliser.png)
+![prismaliser](https://github.com/surinvladyslav/onix-chat-app/assets/67697556/7b3539bc-8ef3-4690-b921-9b01230c3efa)
 
 ## Running the API
 ### Development
