@@ -1,4 +1,4 @@
-![prismaliser](https://github.com/surinvladyslav/onix-chat-app/assets/67697556/7e0b98f7-500e-446c-b3cd-9fe6af65847f)# Onix Chat App
+# Onix Chat App
 
 ## Description
 Welcome to Onix Chat App, a test project developed for Onix Company. This application is a simple chat application.
