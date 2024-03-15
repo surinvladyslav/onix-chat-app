@@ -1,0 +1,240 @@
+<% function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+} %>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<%- include('./head.ejs') %>
+
+<style>
+    .message-container.currentUser  {
+        justify-content: flex-end;
+        .message-info {
+            align-items: flex-end;
+
+            .timestamp {
+                align-self: flex-end;
+            }
+        }
+    }
+
+    .message-container.otherUser {
+        justify-content: flex-start;
+
+        .message-info {
+            align-items: flex-start;
+
+            .timestamp {
+                align-self: flex-start;
+            }
+        }
+    }
+
+    .chat-messages {
+        overflow-y: auto;
+        max-height: 75vh;
+    }
+
+    .input-block {
+        padding: 20px;
+        background-color: #f8f9fa;
+    }
+
+    .message-container {
+        margin-bottom: 10px;
+        border-radius: 5px;
+        overflow: hidden;
+        display: flex;
+    }
+
+    .message-info {
+        display: flex;
+        flex-direction: column;
+        margin-right: 10px;
+    }
+
+    .author {
+        font-weight: bold;
+        margin-bottom: 3px;
+    }
+
+    .message-content {
+        padding: 8px 12px;
+        border-radius: 15px;
+        max-width: 400px;
+        word-wrap: break-word;
+    }
+
+    .timestamp {
+        font-size: 0.8rem;
+        color: #999;
+    }
+
+    .currentUser .message-content {
+        background-color: #007bff;
+        color: #fff;
+    }
+
+    .otherUser .message-content {
+        background-color: #e9ecef;
+        color: #000;
+    }
+
+    .chat-photo {
+        border-radius: 50%;
+        width: 150px;
+        height: 150px;
+    }
+</style>
+<body>
+<div class="container-fluid d-flex flex-column" style="height: 100vh;">
+    <div class="row input-block">
+        <div class="col-md-8 offset-md-2">
+            <div class="d-flex align-items-center justify-content-between mt-3 mb-1">
+                <div class="d-flex align-items-center">
+                    <a class="btn btn-link mr-3" href="/api/v1/home">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <div class="d-flex align-items-center">
+                        <div>
+                            <% if (chatroom && chatroom.name) { %>
+                                <h3><%= chatroom.name %></h3>
+                            <% } else { %>
+                                <h3>Chatroom Name Not Available</h3>
+                            <% } %>
+                            <p>Participants:
+                                <% if (users && users.length) { %>
+                                    <%= users.map((user) => user.fullname).join(', ') %>
+                                <% } else { %>
+                                    No Participants
+                                <% } %>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#chatSettingsModal">
+                        <i class="fas fa-cog mr-1"></i> Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('./editChatinfo.ejs') %>
+
+    <div class="row section-separator">
+        <div class="col-md-8 offset-md-2"></div>
+    </div>
+
+    <div class="row flex-grow-1">
+        <div class="col-md-8 offset-md-2 mt-4 mb-4 chat-messages" id="chatMessages">
+            <% messages && messages.forEach(message => { %>
+                <div class="message-container<%= message.userId === userId ? ' currentUser' : ' otherUser' %>">
+                    <div class="message-info">
+                        <div class="author"><%= message.userId === userId ? 'You' : message.user.fullname %></div>
+                        <div class="message-content">
+                            <span><%= message.content %></span>
+                        </div>
+                        <div class="timestamp"><%= formatTimestamp(message.createdAt) %></div>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+
+    <div class="row input-block">
+        <div class="col-md-8 offset-md-2">
+            <form id="chatForm">
+                <div class="input-group">
+                    <input type="text" id="messageInput" class="form-control" placeholder="Type your message..." required>
+                    <div class="input-group-append">
+                        <button type="button" id="sendMessageBtn" class="btn btn-primary">Send</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  const sendMessageBtn = document.getElementById('sendMessageBtn');
+  const messageInput = document.getElementById('messageInput');
+  const chatMessages = document.getElementById('chatMessages');
+  const userId = '<%= userId %>';
+  const chatroomId = '<%= chatroom.id %>';
+
+  socket.on('connect', () => {
+    console.log('Connected to server');
+  });
+
+  socket.on('message', (message) => {
+    appendMessageToChat(message);
+  });
+
+  sendMessageBtn.addEventListener('click', () => {
+    const message = messageInput.value.trim();
+    if (message) {
+      socket.emit('message', {
+        chatroomId,
+        message,
+        userId,
+      });
+      messageInput.value = '';
+    }
+  });
+
+  function scrollToBottom() {
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+
+  function appendMessageToChat(message) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageContainer = document.createElement('div');
+
+    messageContainer.classList.add('message-container');
+
+    const isCurrentUser = message.userId === +userId;
+    if (isCurrentUser) {
+      messageContainer.classList.add('currentUser');
+    } else {
+      messageContainer.classList.add('otherUser');
+    }
+
+    const formattedTimestamp = formatTimestamp(message.createdAt);
+
+    messageContainer.innerHTML = `
+          <div class="message-info">
+              <div class="author">${isCurrentUser ? 'You' : message.user.fullname}</div>
+              <div class="message-content">
+                  <span>${message.content}</span>
+              </div>
+              <div class="timestamp">${formattedTimestamp}</div>
+          </div>`;
+
+    chatMessages.appendChild(messageContainer);
+    scrollToBottom();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    scrollToBottom();
+  });
+</script>
+</body>
+</html>
