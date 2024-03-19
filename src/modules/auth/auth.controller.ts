@@ -13,18 +13,16 @@ import {
 } from '@nestjs/common';
 import {
   ApiTags,
-  ApiOkResponse,
-  ApiUnauthorizedResponse,
   ApiInternalServerErrorResponse,
   ApiCookieAuth,
   ApiMovedPermanentlyResponse,
   ApiBody,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import {
   Response as ExpressResponse,
   Request as ExpressRequest,
 } from 'express';
-
 import UsersService from '@modules/users/users.service';
 import SignInDto from '@modules/auth/dto/sign-in.dto';
 import IsNotLoggedGuard from '@guards/is-not-logged.guard';
@@ -38,15 +36,13 @@ import SignUpDto from './dto/sign-up.dto';
 export default class AuthController {
   constructor(private readonly usersService: UsersService) {}
 
-  @ApiOkResponse({ description: 'Renders a login page' })
-  @ApiUnauthorizedResponse({ description: 'Returns an unauthorized ' })
+  @ApiExcludeEndpoint()
   @UseGuards(RedirectIfLoggedGuard)
   @Get('login')
   @Render('login')
   index() {}
 
-  @ApiOkResponse({ description: 'Renders a sign up page' })
-  @ApiUnauthorizedResponse({ description: 'Returns the unauthorized error' })
+  @ApiExcludeEndpoint()
   @UseGuards(IsNotLoggedGuard)
   @Get('/sign-up')
   @Render('signup')

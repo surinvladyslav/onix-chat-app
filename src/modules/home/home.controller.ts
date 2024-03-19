@@ -1,22 +1,15 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Render,
-  Res,
-  Req,
-} from '@nestjs/common';
+import { Controller, Get, UseGuards, Render, Res, Req } from '@nestjs/common';
 import { Response as ExpressResponse } from 'express';
 
 import IsLoggedGuard from '@guards/is-logged.guard';
 import { ChatroomService } from '@modules/chatroom/chatroom.service';
-import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import { ApiExcludeEndpoint } from '@nestjs/swagger';
 
-@ApiTags('Home')
-@ApiCookieAuth()
 @Controller('home')
 export default class HomeController {
   constructor(private readonly chatroomService: ChatroomService) {}
+
+  @ApiExcludeEndpoint()
   @UseGuards(IsLoggedGuard)
   @Get()
   @Render('home')

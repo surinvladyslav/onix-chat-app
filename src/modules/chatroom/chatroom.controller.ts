@@ -17,6 +17,7 @@ import {
   ApiBadRequestResponse,
   ApiBody,
   ApiCookieAuth,
+  ApiExcludeEndpoint,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -29,16 +30,15 @@ import { ChatroomDto, MessageDto } from './dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FileUploadDto } from '@modules/chatroom/dto/file.dto';
 
-@ApiTags('Chatroom')
 @ApiCookieAuth()
+@ApiTags('Chatroom')
 @Controller('chatroom')
 export class ChatroomController {
   constructor(private readonly chatroomService: ChatroomService) {}
 
   @Get(':id')
   @Render('chatroom')
-  @ApiOperation({ summary: 'Render chatroom page' })
-  @ApiParam({ name: 'id', type: Number, description: 'Chatroom ID' })
+  @ApiExcludeEndpoint()
   async getChatPage(
     @Param('id') id: string,
     @Req() req,

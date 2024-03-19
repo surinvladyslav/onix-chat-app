@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Put,
-  Body,
-  Param,
-} from '@nestjs/common';
+import { Controller, Get, Put, Body, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiCookieAuth,
