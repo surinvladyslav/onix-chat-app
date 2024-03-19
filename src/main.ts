@@ -77,7 +77,7 @@ async function bootstrap(): Promise<{ port: number }> {
   );
 
   const options: Omit<OpenAPIObject, 'paths'> = new DocumentBuilder()
-    .setTitle('Onix Chat App API v1')
+    .setTitle('Onix Chat API v1')
     .setDescription(
       'For more detailed information about the APIs and endpoints provided by the application, ' +
         'you can check the Swagger documentation',
