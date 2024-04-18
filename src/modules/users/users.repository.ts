@@ -12,10 +12,8 @@ export class UserRepository {
     });
   }
 
-  async findOne(id: number): Promise<User | null> {
-    return this.prisma.user.findFirst({
-      where: { id },
-    });
+  async findOne(params: Prisma.UserFindFirstArgs): Promise<User | null> {
+    return this.prisma.user.findFirst(params);
   }
 
   async create(data: Prisma.UserCreateInput): Promise<User> {

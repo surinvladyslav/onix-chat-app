@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
+  Logger,
   Param,
   ParseIntPipe,
   Post,
@@ -14,35 +16,55 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
-  ApiBody,
-  ApiCookieAuth,
-  ApiExcludeEndpoint,
-  ApiOkResponse,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+  Response as ExpressResponse,
+  Request as ExpressRequest,
+} from 'express';
+import { ApiCookieAuth, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { ChatroomService } from './chatroom.service';
 import { Chatroom, Message } from '@prisma/client';
-import { ChatroomDto, MessageDto } from './dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { FileUploadDto } from '@modules/chatroom/dto/file.dto';
+import { User } from '@modules/users/interfaces/user.interface';
+import {
+  CreateChatroomDto,
+  UpdateChatroomDto,
+} from '@modules/chatroom/dto/chatroom.dto';
+import { MessageDto } from '@modules/chatroom/dto/message.dto';
+import { INTERNAL_SERVER_ERROR } from '@constants/errors.constants';
 
 @ApiCookieAuth()
 @ApiTags('Chatroom')
 @Controller('chatroom')
 export class ChatroomController {
+  private readonly logger = new Logger(ChatroomController.name);
+
   constructor(private readonly chatroomService: ChatroomService) {}
+
+  @Post()
+  @UseInterceptors(FileInterceptor('file'))
+  async create(
+    @Body() chatroomDto: CreateChatroomDto,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<Chatroom> {
+    return this.chatroomService.create(chatroomDto, file);
+  }
+
+  @Put(':chatroomId')
+  @UseInterceptors(FileInterceptor('file'))
+  async update(
+    @Param('chatroomId', ParseIntPipe) chatroomId: number,
+    @Body() chatroomDto: UpdateChatroomDto,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<void> {
+    return this.chatroomService.update(chatroomDto, file, chatroomId);
+  }
 
   @Get(':id')
   @Render('chatroom')
   @ApiExcludeEndpoint()
   async getChatPage(
-    @Param('id') id: string,
-    @Req() req,
-    @Res() res,
+    @Param('id', ParseIntPipe) chatroomId: number,
+    @Req() req: ExpressRequest,
+    @Res() res: ExpressResponse,
   ): Promise<{
     messages: Message[];
     chatroom: Chatroom;
@@ -50,8 +72,8 @@ export class ChatroomController {
     userId: number;
   }> {
     try {
-      const chatroomId = parseInt(id, 10);
-      const userId = req.user.id;
+      const user: User = req.user;
+      const userId: number = user.id;
 
       const data = await this.chatroomService.getChatPageData(
         chatroomId,
@@ -60,7 +82,6 @@ export class ChatroomController {
 
       res.render('chatroom', { ...data });
     } catch (error) {
-      console.error('Error fetching messages for home page:', error);
       return {
         messages: [],
         chatroom: null,
@@ -71,119 +92,38 @@ export class ChatroomController {
   }
 
   @Post('message')
-  @ApiOperation({ summary: 'Send message to chatroom' })
-  @ApiBody({ type: MessageDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Message sent successfully',
-    type: MessageDto,
-  })
-  async sendMessage(@Body() body: MessageDto, @Req() req): Promise<Message> {
-    const { chatroomId, content } = body;
-    return this.chatroomService.sendMessage(chatroomId, content, req.user.id);
-  }
-
-  @Post()
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Create a new chatroom' })
-  @ApiBody({ type: ChatroomDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Chatroom created successfully',
-    type: ChatroomDto,
-  })
-  async createChatroom(
-    @Body() body,
-    @UploadedFile() file: FileUploadDto,
-    @Req() req,
-    @Res() res,
-  ): Promise<Chatroom> {
-    const { name, userIds } = body;
-
-    return this.chatroomService.createChatroom(
-      name,
-      req.user.id,
-      file,
-      JSON.parse(userIds),
-    );
-  }
-
-  @Post(':chatroomId')
-  @ApiOperation({ summary: 'Add users to chatroom' })
-  @ApiResponse({ status: 200, description: 'Users added successfully' })
-  async addUsersToChatroom(
-    @Param('chatroomId') chatroomId: string,
-    @Body('userIds') userIds: number[],
-  ): Promise<void> {
-    const userIdsAsNumbers = userIds.map(Number);
-    await this.chatroomService.addUsersToChatroom(
-      parseInt(chatroomId, 10),
-      userIdsAsNumbers,
-    );
-  }
-
-  @Put(':id')
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Update chatroom details' })
-  @ApiParam({ name: 'id', type: Number, description: 'Chatroom ID' })
-  @ApiBody({
-    description: 'Chatroom data',
-    type: ChatroomDto,
-  })
-  @ApiOkResponse({ description: 'Chatroom details updated successfully' })
-  @ApiBadRequestResponse({ description: 'Invalid data or chatroom not found' })
-  async updateChatroom(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body,
-    @UploadedFile() file: FileUploadDto,
-    @Res() res,
-  ): Promise<string> {
-    const { name, userIds } = body;
-    await this.chatroomService.updateChatroom(
-      id,
-      name,
-      file,
-      JSON.parse(userIds),
-    );
-
-    return res.redirect(`/api/v1/chatroom/${id}`);
+  async sendMessage(
+    @Body() messageDto: MessageDto,
+    @Req() req: ExpressRequest,
+  ): Promise<Message> {
+    try {
+      const user: User = req.user;
+      const userId: number = user.id;
+      return this.chatroomService.sendMessage(messageDto, userId);
+    } catch (error) {
+      this.logger.error(`Error sending message: ${error.message}`);
+      throw new InternalServerErrorException(INTERNAL_SERVER_ERROR);
+    }
   }
 
   @Get(':userId/chatrooms')
-  @ApiOperation({ summary: 'Get chatrooms for user' })
-  @ApiResponse({
-    status: 200,
-    description: 'Chatrooms retrieved successfully',
-    type: [ChatroomDto],
-  })
   async getChatroomsForUser(
-    @Param('userId') userId: string,
+    @Param('userId', ParseIntPipe) userId: number,
   ): Promise<Chatroom[]> {
-    return this.chatroomService.getChatroomsForUser(parseInt(userId, 10));
+    return this.chatroomService.getChatroomsForUser(userId);
   }
 
   @Get(':chatroomId/messages')
-  @ApiOperation({ summary: 'Get messages for chatroom' })
-  @ApiResponse({
-    status: 200,
-    description: 'Messages retrieved successfully',
-    type: [MessageDto],
-  })
   async getMessagesForChatroom(
-    @Param('chatroomId') chatroomId: string,
+    @Param('chatroomId', ParseIntPipe) chatroomId: number,
   ): Promise<Message[]> {
-    return this.chatroomService.getMessagesForChatroom(
-      parseInt(chatroomId, 10),
-    );
+    return this.chatroomService.getMessagesForChatroom(chatroomId);
   }
 
   @Delete(':chatroomId')
-  @ApiOperation({ summary: 'Delete chatroom' })
-  @ApiResponse({ status: 200, description: 'Chatroom deleted successfully' })
-  async deleteChatroom(
-    @Param('chatroomId') chatroomId: string,
-  ): Promise<string> {
-    await this.chatroomService.deleteChatroom(parseInt(chatroomId, 10));
-    return 'good';
+  async delete(
+    @Param('chatroomId', ParseIntPipe) chatroomId: number,
+  ): Promise<void> {
+    await this.chatroomService.delete(chatroomId);
   }
 }

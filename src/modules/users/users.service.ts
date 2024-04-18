@@ -1,19 +1,27 @@
-import { Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import UserDto from './dto/user.dto';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { UserRepository } from '@modules/users/users.repository';
 import { User } from '@prisma/client';
+import { Session } from 'express-session';
+import { SignUpDto } from '@modules/auth/dto/sign-up.dto';
+import { USER_CONFLICT } from '@constants/errors.constants';
+import UserEntity from '@modules/users/entities/user.entity';
 
 @Injectable()
 export default class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(private readonly usersRepository: UserRepository) {}
 
-  async create(userDto: UserDto): Promise<User> {
-    return this.usersRepository.create({
-      password: userDto.password,
-      email: userDto.email,
-      fullname: userDto.fullname,
+  async create(signUpDto: SignUpDto): Promise<User> {
+    const testUser: User = await this.usersRepository.findOne({
+      where: { email: signUpDto.email },
     });
+
+    if (testUser) {
+      throw new ConflictException(USER_CONFLICT);
+    }
+
+    return this.usersRepository.create(signUpDto);
   }
 
   async updateProfile(userId: number, fullname: string): Promise<User> {
@@ -33,10 +41,23 @@ export default class UsersService {
   }
 
   async findOne(id: number): Promise<User | null> {
-    return this.usersRepository.findOne(id);
+    return this.usersRepository.findOne({
+      where: { id },
+    });
   }
 
-  async findAll(): Promise<User[]> {
+  async findAll(): Promise<UserEntity[]> {
     return this.usersRepository.findAll();
+  }
+
+  logout(session: Session): void {
+    session.destroy((err: Error | null) => {
+      if (err) {
+        this.logger.error(
+          'Error occurred while destroying session:',
+          err.message,
+        );
+      }
+    });
   }
 }

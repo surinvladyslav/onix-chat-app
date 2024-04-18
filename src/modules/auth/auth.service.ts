@@ -1,9 +1,8 @@
 import * as bcrypt from 'bcrypt';
-
 import { Injectable, NotFoundException } from '@nestjs/common';
-
 import { ValidateUserOutput } from './interfaces/validate-user-output.interface';
 import UsersService from '@modules/users/users.service';
+import { USER_NOT_FOUND } from '@constants/errors.constants';
 
 @Injectable()
 export default class AuthService {
@@ -12,22 +11,22 @@ export default class AuthService {
   async validateUser(
     email: string,
     password: string,
-  ): Promise<null | ValidateUserOutput> {
+  ): Promise<ValidateUserOutput | null> {
     const user = await this.usersService.getVerifiedByEmail(email);
 
     if (!user) {
-      throw new NotFoundException('The item does not exist');
+      throw new NotFoundException(USER_NOT_FOUND);
     }
 
-    const passwordCompared = await bcrypt.compare(password, user.password);
+    const passwordMatches = await bcrypt.compare(password, user.password);
 
-    if (passwordCompared) {
-      return {
-        id: user.id,
-        email: user.email,
-      };
+    if (!passwordMatches) {
+      return null;
     }
 
-    return null;
+    return {
+      id: user.id,
+      email: user.email,
+    };
   }
 }

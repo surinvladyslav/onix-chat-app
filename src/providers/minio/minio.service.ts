@@ -19,8 +19,9 @@ export class MinioService {
     });
   }
 
-  async uploadImage(file: any, fileName: string): Promise<void> {
+  async uploadImage(file: any): Promise<string> {
     try {
+      const fileName = `${Date.now()}-${file.originalname}`;
       await this.minioClient.putObject(
         this.configService.get('minio.bucketName'),
         fileName,
@@ -30,6 +31,7 @@ export class MinioService {
           'Content-Type': file.mimetype,
         },
       );
+      return fileName;
     } catch (error) {
       this.logger.error(`Failed to upload image: ${error.message}`);
       throw new Error(`Failed to upload image: ${error.message}`);

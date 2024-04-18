@@ -2,7 +2,8 @@ import * as path from 'path';
 import * as session from 'express-session';
 import * as passport from 'passport';
 import * as basicAuth from 'express-basic-auth';
-import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import { join } from 'path';
+import { HttpAdapterHost, NestFactory, Reflector } from '@nestjs/core';
 import {
   Logger,
   RequestMethod,
@@ -14,13 +15,16 @@ import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from '@modules/app/app.module';
 import { VersioningOptions } from '@nestjs/common/interfaces/version-options.interface';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import NotFoundExceptionFilter from '@filters/not-found.exception.filter';
+import { NotFoundExceptionFilter } from '@filters/not-found.exception.filter';
 import { AllExceptionsFilter } from '@filters/all.exceptions.filter';
 import { TransformInterceptor } from '@interceptors/transform.interceptor';
 import { PrismaClientExceptionFilter } from '@providers/prisma';
-import { join } from 'path';
 import { ThrottlerExceptionsFilter } from '@filters/throttler.exception.filter';
-import BaseWsExceptionFilter from '@filters/base.ws.exception.filter';
+import { RedisIoAdapter } from './adapters/redis.adapter';
+import LoginExceptionFilter from '@filters/login.exception.filter';
+import { BadRequestExceptionFilter } from '@filters/bad-request-exception.filter';
+import { ValidationExceptionFilter } from '@filters/validation-exception.filter';
+import { SessionAuthGuard } from '@guards/session-auth.guard';
 
 async function bootstrap(): Promise<{ port: number }> {
   const app: NestExpressApplication =
@@ -31,11 +35,13 @@ async function bootstrap(): Promise<{ port: number }> {
 
   const configService: ConfigService<any, boolean> = app.get(ConfigService);
   const appConfig = configService.get('app');
-
   const swaggerConfig = configService.get('swagger');
   const sessionConfig = configService.get('session');
+  const reflector = app.get(Reflector);
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
 
-  app.enableCors();
+  app.useWebSocketAdapter(redisIoAdapter);
 
   const viewsPath = join(__dirname, '../public/views');
 
@@ -93,13 +99,17 @@ async function bootstrap(): Promise<{ port: number }> {
     },
   });
 
+  app.useGlobalGuards(new SessionAuthGuard(reflector));
+
   app.useGlobalInterceptors(new TransformInterceptor());
 
   const { httpAdapter } = app.get(HttpAdapterHost);
 
   app.useGlobalFilters(
     new AllExceptionsFilter(),
-    new BaseWsExceptionFilter(),
+    new BadRequestExceptionFilter(),
+    new ValidationExceptionFilter(),
+    new LoginExceptionFilter(),
     new NotFoundExceptionFilter(),
     new PrismaClientExceptionFilter(httpAdapter),
     new ThrottlerExceptionsFilter(),
@@ -111,5 +121,5 @@ async function bootstrap(): Promise<{ port: number }> {
 }
 
 bootstrap().then((appConfig) => {
-  Logger.log(`Running in http://localhost:${appConfig.port}`, 'Bootstrap');
+  Logger.log(`Running in http://localhost:${appConfig.port}/docs`, 'Bootstrap');
 });

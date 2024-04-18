@@ -8,7 +8,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="newChatForm" onsubmit="createChat(event)" class="needs-validation" novalidate>
+                <form id="newChatForm" onsubmit="createChat('<%= user.id %>', event)" class="needs-validation" novalidate>
                     <div class="form-group">
                         <label for="name">Group Name</label>
                         <input type="text" class="form-control" id="name" name="name" placeholder="Enter group name" required>
@@ -51,7 +51,7 @@
   fetch('/api/v1/users')
     .then(response => response.json())
     .then(data => {
-      users = data.data
+      users = data.data.filter(user => user.id !== <%= user.id %>);
       users.forEach(user => {
         const listUser = document.createElement('li');
         listUser.innerHTML = `
@@ -81,8 +81,9 @@
 
   dropdownMenu.addEventListener('change', handleCB);
 
-  async function createChat(event) {
+  async function createChat(userId, event) {
     event.preventDefault();
+
     const form = document.getElementById('newChatForm');
 
     if (form.checkValidity() === false) {
@@ -93,12 +94,14 @@
 
     const formData = new FormData(form);
 
-    formData.append('userIds', JSON.stringify(selectedUsers));
+    formData.append('creatorId', userId);
+
+    formData.append('participants', JSON.stringify(selectedUsers));
 
     try {
       const response = await fetch('/api/v1/chatroom', {
         method: 'POST',
-        body: formData,
+        body: formData
       });
       if (!response.ok) {
         throw new Error('Failed to create chatroom');

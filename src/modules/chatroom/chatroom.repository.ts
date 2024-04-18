@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@providers/prisma';
-import { Chatroom, Message, Prisma } from '@prisma/client';
+import { Chatroom, Message } from '@prisma/client';
 
 @Injectable()
 export class ChatroomRepository {
@@ -30,29 +30,22 @@ export class ChatroomRepository {
         chatroom: { connect: { id: chatroomId } },
         user: { connect: { id: userId } },
       },
+      include: {
+        chatroom: {
+          include: {
+            users: true,
+          },
+        },
+        user: true,
+      },
     });
-
-    // return this.prisma.message.create({
-    //   data: {
-    //     content: message,
-    //     chatroomId,
-    //     userId,
-    //   },
-    //   include: {
-    //     chatroom: {
-    //       include: {
-    //         users: true,
-    //       },
-    //     },
-    //     user: true,
-    //   },
-    // });
   }
 
-  async create(
+  create(
     name: string,
     creatorId: number,
     imageUrl: string,
+    users: number[],
   ): Promise<Chatroom> {
     return this.prisma.chatroom.create({
       data: {
@@ -60,9 +53,7 @@ export class ChatroomRepository {
         creatorId,
         imageUrl,
         users: {
-          connect: {
-            id: creatorId,
-          },
+          connect: [{ id: creatorId }, ...users.map((id: number) => ({ id }))],
         },
       },
     });
@@ -98,9 +89,22 @@ export class ChatroomRepository {
 
   async update(
     id: number,
-    data: Prisma.ChatroomUpdateInput,
+    name: string,
+    creatorId: number,
+    imageUrl: string,
+    users: number[],
   ): Promise<Chatroom> {
-    return this.prisma.chatroom.update({ where: { id }, data });
+    return this.prisma.chatroom.update({
+      where: { id },
+      data: {
+        name,
+        creatorId,
+        imageUrl,
+        users: {
+          connect: [{ id: creatorId }, ...users.map((id: number) => ({ id }))],
+        },
+      },
+    });
   }
 
   async delete(id: number): Promise<Chatroom> {

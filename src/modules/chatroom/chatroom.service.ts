@@ -1,16 +1,28 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Chatroom, Message } from '@prisma/client';
 import { ChatroomRepository } from '@modules/chatroom/chatroom.repository';
 import { MinioService } from '@providers/minio/minio.service';
-import { FileUploadDto } from '@modules/chatroom/dto/file.dto';
 import UsersService from '@modules/users/users.service';
+import {
+  CreateChatroomDto,
+  UpdateChatroomDto,
+} from '@modules/chatroom/dto/chatroom.dto';
+import { MessageDto } from '@modules/chatroom/dto/message.dto';
+import {
+  CHATROOM_CONFLICT,
+  CHATROOM_NOT_FOUND,
+} from '@constants/errors.constants';
 
 @Injectable()
 export class ChatroomService {
+  private readonly logger = new Logger(ChatroomService.name);
+
   constructor(
     private readonly chatroomRepository: ChatroomRepository,
     private readonly minioService: MinioService,
@@ -40,46 +52,55 @@ export class ChatroomService {
   }
 
   async getChatPageData(chatroomId: number, userId: number) {
-    const messages = await this.getMessagesForChatroom(chatroomId);
-    const chatroom = await this.getChatroom(chatroomId);
-    const users = await this.userService.getUsersOfChatroom(chatroomId);
-    let imageUrl: string | null = null;
+    try {
+      const [messages, chatroom, users] = await Promise.all([
+        this.getMessagesForChatroom(chatroomId),
+        this.getChatroom(chatroomId),
+        this.userService.getUsersOfChatroom(chatroomId),
+      ]);
 
-    if (chatroom.imageUrl) {
-      imageUrl = await this.minioService.getImageUrl(chatroom.imageUrl);
+      let imageUrl: string | null = null;
+      if (chatroom.imageUrl) {
+        imageUrl = await this.minioService.getImageUrl(chatroom.imageUrl);
+      }
+
+      return { messages, chatroom, imageUrl, users, userId };
+    } catch (error) {
+      this.logger.error(`Error fetching chat page data: ${error}`);
+      return {
+        messages: [],
+        chatroom: null,
+        imageUrl: null,
+        users: [],
+        userId,
+      };
     }
-
-    return { messages, chatroom, imageUrl, users, userId };
   }
 
-  async createChatroom(
-    name: string,
-    creatorId: number,
-    file: FileUploadDto | undefined,
-    userIds: number[],
+  async create(
+    chatroomDto: CreateChatroomDto,
+    file: Express.Multer.File,
   ): Promise<Chatroom> {
+    const { name, creatorId, participants } = chatroomDto;
+
     const existingChatroom = await this.chatroomRepository.findByName(name);
     if (existingChatroom) {
-      throw new BadRequestException('Chatroom already exists');
+      throw new ConflictException(CHATROOM_CONFLICT);
     }
 
-    let imageFileName: string | null = null;
-
+    let imageUrl: string | null = null;
     if (file) {
-      const fileName = `${Date.now()}-${file.originalname}`;
-      await this.minioService.uploadImage(file, fileName);
-      imageFileName = fileName;
+      imageUrl = await this.minioService.uploadImage(file);
     }
 
-    const newChatroom = await this.chatroomRepository.create(
+    return this.chatroomRepository.create(
       name,
-      creatorId,
-      imageFileName,
+      Number(creatorId),
+      imageUrl,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      JSON.parse(participants),
     );
-
-    await this.addUsersToChatroom(newChatroom.id, userIds);
-
-    return newChatroom;
   }
 
   async addUsersToChatroom(chatroomId: number, userIds: number[]) {
@@ -98,53 +119,54 @@ export class ChatroomService {
     return this.chatroomRepository.getMessagesForChatroom(chatroomId);
   }
 
-  async sendMessage(
-    chatroomId: number,
-    message: string,
-    userId: number,
-  ): Promise<Message> {
+  async sendMessage(messageDto: MessageDto, userId: number): Promise<Message> {
+    const { chatroomId, content } = messageDto;
+
     const chatroom = await this.chatroomRepository.findById(chatroomId);
     if (!chatroom) {
       throw new NotFoundException('Chatroom not found');
     }
 
-    return this.chatroomRepository.createMessage(chatroomId, message, userId);
+    return this.chatroomRepository.createMessage(chatroomId, content, userId);
   }
 
-  async updateChatroom(
+  async update(
+    chatroomDto: UpdateChatroomDto,
+    file: Express.Multer.File,
     chatroomId: number,
-    name: string,
-    file: FileUploadDto | undefined,
-    userIds: number[],
   ) {
-    let imageFileName: string | null = null;
+    const { name, creatorId, participants } = chatroomDto;
+
     const chatroom = await this.chatroomRepository.findById(chatroomId);
     if (!chatroom) {
       throw new NotFoundException('Chatroom not found');
     }
 
+    let imageUrl: string | null = null;
     if (file) {
-      const fileName = `${Date.now()}-${file.originalname}`;
-      await this.minioService.uploadImage(file, fileName);
-      imageFileName = fileName;
+      imageUrl = await this.minioService.uploadImage(file);
     }
-
-    await this.chatroomRepository.update(chatroomId, {
-      name,
-      imageUrl: imageFileName,
-    });
 
     if (chatroom.imageUrl) {
       await this.minioService.deleteImage(chatroom.imageUrl);
     }
 
-    await this.addUsersToChatroom(chatroomId, userIds);
+    await this.chatroomRepository.update(
+      chatroomId,
+      name,
+      Number(creatorId),
+      imageUrl,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      JSON.parse(participants),
+    );
   }
 
-  async deleteChatroom(chatroomId: number) {
+  async delete(chatroomId: number) {
     const chatroom = await this.chatroomRepository.findById(chatroomId);
+
     if (!chatroom) {
-      throw new NotFoundException('Chatroom not found');
+      throw new NotFoundException(CHATROOM_NOT_FOUND);
     }
 
     await this.chatroomRepository.delete(chatroomId);

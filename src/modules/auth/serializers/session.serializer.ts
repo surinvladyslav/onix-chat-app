@@ -1,7 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PassportSerializer } from '@nestjs/passport';
-import UserEntity from '@modules/users/entities/user.entity';
 import UsersService from '@modules/users/users.service';
+import { User } from '@prisma/client';
+import { USER_NOT_FOUND } from '@constants/errors.constants';
 
 @Injectable()
 export default class SessionSerializer extends PassportSerializer {
@@ -9,17 +10,27 @@ export default class SessionSerializer extends PassportSerializer {
     super();
   }
 
-  serializeUser(user: UserEntity, done: CallableFunction) {
-    done(null, user);
+  serializeUser(
+    user: User,
+    done: (err: Error | null, id: number) => void,
+  ): void {
+    done(null, user.id);
   }
 
-  async deserializeUser(user: UserEntity, done: CallableFunction) {
-    const foundUser = await this.usersService.findById(user.id);
+  async deserializeUser(
+    id: number,
+    done: (err: Error | null, user?: User) => void,
+  ): Promise<void> {
+    try {
+      const foundUser = await this.usersService.findById(id);
 
-    if (!foundUser) {
-      return done(new UnauthorizedException('The user does not exist'));
+      if (!foundUser) {
+        throw new NotFoundException(USER_NOT_FOUND);
+      }
+
+      done(null, foundUser);
+    } catch (error) {
+      done(error);
     }
-
-    return done(null, user);
   }
 }

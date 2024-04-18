@@ -104,7 +104,9 @@
 
     const formData = new FormData(form);
 
-    formData.append('userIds', JSON.stringify(selectedUsers));
+    formData.append('creatorId', userId);
+
+    formData.append('participants', JSON.stringify(selectedUsers));
 
     try {
       const response = await fetch(`/api/v1/chatroom/${chatroomId}`, {

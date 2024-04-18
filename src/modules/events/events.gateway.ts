@@ -3,30 +3,34 @@ import {
   OnGatewayConnection,
   WebSocketServer,
   SubscribeMessage,
+  OnGatewayDisconnect,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatroomService } from '../chatroom/chatroom.service';
+import { Logger } from '@nestjs/common';
 
 @WebSocketGateway()
-export default class EventsGateway implements OnGatewayConnection {
+export default class EventsGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   private server: Server;
 
-  constructor(private readonly chatroomService: ChatroomService) {
-    console.log('Socket server initialized');
-  }
+  private logger: Logger = new Logger('EventsGateway');
+  constructor(private readonly chatroomService: ChatroomService) {}
 
-  afterInit(server: Server) {
+  public afterInit(server: Server): void {
     this.server = server;
-    console.log('Socket server initialized');
+    return this.logger.log('Socket server initialized');
   }
 
-  handleConnection(client: Socket): void {
-    console.log(`Client connected: ${client.id}`);
+  public handleDisconnect(client: Socket): void {
+    return this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+  public handleConnection(client: Socket): void {
+    return this.logger.log(`Client connected: ${client.id}`);
   }
 
   @SubscribeMessage('message')
@@ -38,14 +42,15 @@ export default class EventsGateway implements OnGatewayConnection {
 
     try {
       const savedMessage = await this.chatroomService.sendMessage(
-        parseInt(chatroomId, 10),
-        message,
+        {
+          chatroomId: parseInt(chatroomId, 10),
+          content: message,
+        },
         parseInt(userId, 10),
       );
 
       this.server.emit('message', savedMessage);
     } catch (error) {
-      console.error('Error handling message:', error);
       socket.emit('errorMessage', 'Error handling message');
     }
   }

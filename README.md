@@ -7,10 +7,7 @@ Welcome to Onix Chat App, a test project developed for Onix Company. This applic
 
 > Nest.js API. Supports PostgreSQL, Socket.io, PM2, Prisma, Docker, Docker-compose, Min.io, Swagger, EJS
 
-## Prisma Scheme
-![prismaliser](https://github.com/surinvladyslav/onix-chat-app/assets/67697556/7b3539bc-8ef3-4690-b921-9b01230c3efa)
-
-## Running the API
+## Running the Web Server
 ### Development
 To start the application in development mode, run:
 To run the Onix Chat App locally, follow these steps:
@@ -65,7 +62,7 @@ To run the Onix Chat App locally, follow these steps:
 
 To start the application using PM2, run: example start with scale on 2 core:
 ```bash
-pm2 start ./dist/main.js -i 2 --no-daemon
+pm2 start ecosystem.config.js
 ```
 
 ### Starting the Application with Docker
@@ -79,7 +76,7 @@ To run your app in docker containers choose "Yes" when the generator asks you ab
 
 #### Now, lift up your app in docker
 ```bash
-  docker-compose up
+  docker-compose up -d
 ```
 
 ## Set up environment

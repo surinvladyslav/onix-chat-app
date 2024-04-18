@@ -1,12 +1,22 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { User } from '@prisma/client';
+import { Exclude, Expose } from 'class-transformer';
 
-export default class UserEntity extends Document {
-  @ApiProperty({ type: String })
-  readonly id: number;
+export default class UserEntity implements User {
+  @Expose()
+  readonly id!: number;
 
-  @ApiProperty({ type: String })
-  readonly email: string = '';
+  @Expose()
+  readonly fullname!: string;
 
-  @ApiProperty({ type: String })
-  readonly password: string = '';
+  @Expose()
+  readonly email!: string;
+
+  @Exclude()
+  readonly password!: string | null;
+
+  @Expose()
+  readonly createdAt!: Date;
+
+  @Expose()
+  readonly updatedAt!: Date;
 }
