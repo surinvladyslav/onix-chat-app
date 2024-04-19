@@ -1,8 +1,5 @@
-import { Controller, Get, UseGuards, Render, Res, Req } from '@nestjs/common';
-import {
-  Response as ExpressResponse,
-  Request as ExpressRequest,
-} from 'express';
+import { Controller, Get, UseGuards, Render, Req } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
 
 import IsLoggedGuard from '@guards/is-logged.guard';
 import { ChatroomService } from '@modules/chatroom/chatroom.service';
@@ -15,19 +12,14 @@ export default class HomeController {
 
   @ApiExcludeEndpoint()
   @UseGuards(IsLoggedGuard)
-  @Get()
   @Render('home')
-  async getHome(@Req() req: ExpressRequest, @Res() res: ExpressResponse) {
-    try {
-      const user: User = req.user;
-      const userId: number = user.id;
+  @Get('/')
+  async getHome(@Req() req: ExpressRequest) {
+    const user: User = req.user;
 
-      const chats = await this.chatroomService.getChatroomsForUser(userId);
-      const processedChats = await this.chatroomService.processChatrooms(chats);
+    const chats = await this.chatroomService.getChatroomsForUser(user.id);
+    const processedChats = await this.chatroomService.processChatrooms(chats);
 
-      return res.render('home', { chats: processedChats, user: req.user });
-    } catch (error) {
-      return { user: null, chats: [] };
-    }
+    return { chats: processedChats, user };
   }
 }

@@ -1,12 +1,26 @@
 version: '3.8'
 services:
-  nest-api:
+  nest-api-1:
     build:
       context: ./../
       dockerfile: ./docker/Dockerfile
     restart: always
     ports:
       - "3000"
+    depends_on:
+      - postgres
+      - minio
+      - redis
+    env_file:
+      - ../.env
+
+  nest-api-2:
+    build:
+      context: ./../
+      dockerfile: ./docker/Dockerfile
+    restart: always
+    ports:
+      - "3001"
     depends_on:
       - postgres
       - minio
@@ -44,7 +58,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - nest-api
+      - nest-api-1
+      - nest-api-2
 
   redis:
     image: redis:latest

@@ -12,7 +12,7 @@ import {
   Render,
   Req,
   Res,
-  UploadedFile,
+  UploadedFile, UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import {
@@ -30,6 +30,7 @@ import {
 } from '@modules/chatroom/dto/chatroom.dto';
 import { MessageDto } from '@modules/chatroom/dto/message.dto';
 import { INTERNAL_SERVER_ERROR } from '@constants/errors.constants';
+import IsLoggedGuard from '@guards/is-logged.guard';
 
 @ApiCookieAuth()
 @ApiTags('Chatroom')
@@ -58,37 +59,23 @@ export class ChatroomController {
     return this.chatroomService.update(chatroomDto, file, chatroomId);
   }
 
+  @ApiExcludeEndpoint()
+  @UseGuards(IsLoggedGuard)
   @Get(':id')
   @Render('chatroom')
-  @ApiExcludeEndpoint()
   async getChatPage(
     @Param('id', ParseIntPipe) chatroomId: number,
     @Req() req: ExpressRequest,
-    @Res() res: ExpressResponse,
   ): Promise<{
     messages: Message[];
     chatroom: Chatroom;
     imageUrl: string;
     userId: number;
   }> {
-    try {
-      const user: User = req.user;
-      const userId: number = user.id;
+    const user: User = req.user;
+    const userId: number = user.id;
 
-      const data = await this.chatroomService.getChatPageData(
-        chatroomId,
-        userId,
-      );
-
-      res.render('chatroom', { ...data });
-    } catch (error) {
-      return {
-        messages: [],
-        chatroom: null,
-        imageUrl: null,
-        userId: null,
-      };
-    }
+    return this.chatroomService.getChatPageData(chatroomId, userId);
   }
 
   @Post('message')

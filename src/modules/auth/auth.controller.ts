@@ -76,7 +76,7 @@ export default class AuthController {
   @UseFilters(LoginExceptionFilter)
   @Redirect('/api/v1/home')
   @Post('login')
-  login(@Req() req: any): any {
+  login(@Req() req: ExpressRequest): any {
     return req.user;
   }
 

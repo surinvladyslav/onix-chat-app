@@ -101,14 +101,14 @@
                     </a>
                     <div class="d-flex align-items-center">
                         <div>
-                            <% if (chatroom && chatroom.name) { %>
-                                <h3><%= chatroom.name %></h3>
+                            <% if (data.chatroom.name) { %>
+                                <h3><%= data.chatroom.name %></h3>
                             <% } else { %>
                                 <h3>Chatroom Name Not Available</h3>
                             <% } %>
                             <p>Participants:
-                                <% if (users && users.length) { %>
-                                    <%= users.map((user) => user.fullname).join(', ') %>
+                                <% if (data.users.length) { %>
+                                    <%= data.users.map((user) => user.fullname).join(', ') %>
                                 <% } else { %>
                                     No Participants
                                 <% } %>
@@ -132,10 +132,10 @@
 
     <div class="row flex-grow-1">
         <div class="col-md-8 offset-md-2 mt-4 mb-4 chat-messages" id="chatMessages">
-            <% messages && messages.forEach(message => { %>
-                <div class="message-container<%= message.userId === userId ? ' currentUser' : ' otherUser' %>">
+            <% data.messages.forEach(message => { %>
+                <div class="message-container<%= message.userId === data.userId ? ' currentUser' : ' otherUser' %>">
                     <div class="message-info">
-                        <div class="author"><%= message.userId === userId ? 'You' : message.user.fullname %></div>
+                        <div class="author"><%= message.userId === data.userId ? 'You' : message.user.fullname %></div>
                         <div class="message-content">
                             <span><%= message.content %></span>
                         </div>
@@ -169,8 +169,8 @@
   const sendMessageBtn = document.getElementById('sendMessageBtn');
   const messageInput = document.getElementById('messageInput');
   const chatMessages = document.getElementById('chatMessages');
-  const userId = '<%= userId %>';
-  const chatroomId = '<%= chatroom.id %>';
+  const userId = '<%= data.userId %>';
+  const chatroomId = '<%= data.chatroom.id %>';
 
   socket.on('connect', () => {
     console.log('Connected to server');

@@ -11,7 +11,7 @@
                 <form id="profileSettingsForm" onsubmit="validateProfileSettings(event)">
                     <div class="form-group">
                         <label for="profileName">Change Profile Name</label>
-                        <input type="text" class="form-control" id="profileName" name="name" value="<%= user.fullname %>" placeholder="Enter new profile name" required>
+                        <input type="text" class="form-control" id="profileName" name="name" value="<%= data.user.fullname %>" placeholder="Enter new profile name" required>
                         <div class="invalid-feedback">Please enter a valid profile name.</div>
                     </div>
                     <button type="button" class="btn btn-danger" onclick="logout(event)">
@@ -21,7 +21,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="submit" class="btn btn-primary" onclick="updateProfile('<%= user.id %>', event)">Save Changes</button>
+                <button type="submit" class="btn btn-primary" onclick="updateProfile('<%= data.user.id %>', event)">Save Changes</button>
             </div>
         </div>
     </div>

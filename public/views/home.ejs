@@ -72,8 +72,8 @@
     <div class="col-md-8 offset-md-2">
         <div class="d-flex align-items-center justify-content-between mt-5 mb-4">
             <div class="chat-cards">
-                <% if (chats && chats.length > 0) { %>
-                    <% chats.forEach(chat => { %>
+                <% if (data.chats.length > 0) { %>
+                    <% data.chats.forEach(chat => { %>
                         <div class="chat-card">
                             <a href="/api/v1/chatroom/<%= chat.id %>" class="card">
                                 <% if (chat.imageUrl) { %>
