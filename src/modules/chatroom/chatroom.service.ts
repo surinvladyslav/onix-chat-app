@@ -119,7 +119,7 @@ export class ChatroomService {
     return this.chatroomRepository.getMessagesForChatroom(chatroomId);
   }
 
-  async sendMessage(messageDto: MessageDto, userId: number): Promise<Message> {
+  async saveMessage(messageDto: MessageDto, userId: number): Promise<Message> {
     const { chatroomId, content } = messageDto;
 
     const chatroom = await this.chatroomRepository.findById(chatroomId);

@@ -86,7 +86,7 @@ export class ChatroomController {
     try {
       const user: User = req.user;
       const userId: number = user.id;
-      return this.chatroomService.sendMessage(messageDto, userId);
+      return this.chatroomService.saveMessage(messageDto, userId);
     } catch (error) {
       this.logger.error(`Error sending message: ${error.message}`);
       throw new InternalServerErrorException(INTERNAL_SERVER_ERROR);

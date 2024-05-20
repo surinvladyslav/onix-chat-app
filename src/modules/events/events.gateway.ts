@@ -41,7 +41,7 @@ export default class EventsGateway
     const { chatroomId, message, userId } = data;
 
     try {
-      const savedMessage = await this.chatroomService.sendMessage(
+      const savedMessage = await this.chatroomService.saveMessage(
         {
           chatroomId: parseInt(chatroomId, 10),
           content: message,
